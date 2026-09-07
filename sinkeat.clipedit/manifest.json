@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "sinkeat.clipedit",
+  "name": "ClipEdit",
+  "version": "1.0.0",
+  "author": "Ahmed Sinkeat",
+  "description": "Edit clipboard text in place, inside the Omarchy clipboard",
+  "kinds": [
+    "extension"
+  ],
+  "entryPoints": {
+    "extension": "ClipEdit.qml"
+  },
+  "extension": {
+    "host": "omarchy.clipboard"
+  }
+}
