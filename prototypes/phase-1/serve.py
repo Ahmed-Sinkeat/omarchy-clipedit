@@ -15,7 +15,7 @@ class PrototypeHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"ClipEdit Phase 1: http://{HOST}:{PORT}/?variant=A")
+    print(f"ClipEdit Phase 1: http://{HOST}:{PORT}/")
     try:
         ThreadingHTTPServer((HOST, PORT), PrototypeHandler).serve_forever()
     except KeyboardInterrupt:
