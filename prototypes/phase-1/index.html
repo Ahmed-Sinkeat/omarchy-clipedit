@@ -1,0 +1,1195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>ClipEdit Phase 1 prototype</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --desktop: #080c0f;
+      --surface: rgba(12, 17, 20, 0.96);
+      --surface-raised: #11191c;
+      --surface-soft: #142024;
+      --text: #d8e1df;
+      --muted: #78878a;
+      --border: #344a4b;
+      --accent: #8bc9c0;
+      --accent-soft: rgba(139, 201, 192, 0.18);
+      --danger: #d88f92;
+      --radius: 9px;
+      --focus: 2px solid #b9fff4;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      min-width: 320px;
+      overflow-x: hidden;
+      background:
+        linear-gradient(rgba(4, 7, 8, 0.78), rgba(4, 7, 8, 0.91)),
+        radial-gradient(circle at 18% 22%, #244047 0, transparent 30%),
+        radial-gradient(circle at 76% 70%, #182e33 0, transparent 34%),
+        var(--desktop);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    button:focus-visible,
+    textarea:focus-visible {
+      outline: var(--focus);
+      outline-offset: 2px;
+    }
+
+    .prototype-note {
+      position: fixed;
+      z-index: 30;
+      top: 18px;
+      left: 18px;
+      max-width: min(420px, calc(100vw - 36px));
+      padding: 10px 13px;
+      border: 1px solid rgba(139, 201, 192, 0.36);
+      border-radius: 8px;
+      background: rgba(8, 12, 15, 0.9);
+      color: var(--muted);
+      font-size: 0.78rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .prototype-note strong {
+      color: var(--accent);
+      font-weight: 650;
+    }
+
+    .stage {
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      padding: 78px 28px 102px;
+    }
+
+    .variant {
+      display: none;
+      width: min(1060px, 100%);
+    }
+
+    .variant[data-active="true"] {
+      display: block;
+    }
+
+    .variant[data-overlay="closed"] .clipboard-window {
+      display: none;
+    }
+
+    .desktop-result {
+      display: none;
+      width: min(540px, 100%);
+      margin-inline: auto;
+      padding: 32px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .variant[data-overlay="closed"] .desktop-result {
+      display: block;
+    }
+
+    .desktop-result svg {
+      width: 34px;
+      height: 34px;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+
+    .desktop-result h2 {
+      margin: 0 0 6px;
+      font-size: 1.08rem;
+    }
+
+    .desktop-result p {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .clipboard-window {
+      position: relative;
+      height: min(650px, calc(100vh - 180px));
+      min-height: 500px;
+      overflow: hidden;
+      border: 1px solid rgba(52, 74, 75, 0.9);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .window-header {
+      display: flex;
+      min-height: 62px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 18px;
+      border-bottom: 1px solid rgba(52, 74, 75, 0.55);
+    }
+
+    .search-copy {
+      min-width: 0;
+      color: rgba(216, 225, 223, 0.58);
+      font-size: 1rem;
+    }
+
+    .mode-label {
+      flex: none;
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .content-grid {
+      display: grid;
+      height: calc(100% - 62px);
+    }
+
+    .history-panel {
+      min-width: 0;
+      overflow: hidden;
+      border-right: 1px solid rgba(52, 74, 75, 0.55);
+    }
+
+    .history-list {
+      display: grid;
+      align-content: start;
+      gap: 4px;
+      height: 100%;
+      margin: 0;
+      padding: 14px;
+      overflow-y: auto;
+      list-style: none;
+    }
+
+    .history-item {
+      display: grid;
+      width: 100%;
+      min-height: 54px;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 12px;
+      border: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      transition: background-color 160ms ease, color 160ms ease;
+    }
+
+    .history-item:hover {
+      background: rgba(216, 225, 223, 0.07);
+    }
+
+    .history-item[aria-selected="true"] {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .history-item .item-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-item .item-type {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+    }
+
+    .detail-panel {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .view-surface,
+    .edit-surface {
+      height: 100%;
+    }
+
+    .view-surface {
+      display: flex;
+      flex-direction: column;
+      padding: 22px;
+    }
+
+    .edit-surface {
+      display: none;
+    }
+
+    .variant[data-mode="editing"] .view-surface {
+      display: none;
+    }
+
+    .variant[data-mode="editing"] .edit-surface {
+      display: flex;
+    }
+
+    .pane-kicker {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.73rem;
+      font-weight: 650;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .preview-text {
+      max-width: 68ch;
+      margin: 0;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .pane-spacer {
+      flex: 1;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding-top: 18px;
+    }
+
+    .action-row.start {
+      justify-content: flex-start;
+    }
+
+    .button {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-soft);
+      color: var(--text);
+      cursor: pointer;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+    }
+
+    .button:hover {
+      border-color: rgba(139, 201, 192, 0.7);
+      background: #19282c;
+    }
+
+    .button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #0c1114;
+      font-weight: 700;
+    }
+
+    .button.primary:hover {
+      background: #a5ded6;
+    }
+
+    .button.ghost {
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .button svg {
+      width: 17px;
+      height: 17px;
+      flex: none;
+    }
+
+    kbd {
+      padding: 2px 6px;
+      border: 1px solid rgba(120, 135, 138, 0.46);
+      border-radius: 5px;
+      background: rgba(8, 12, 15, 0.56);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.7rem;
+      white-space: nowrap;
+    }
+
+    .editor {
+      width: 100%;
+      min-height: 0;
+      flex: 1;
+      resize: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0a1012;
+      color: var(--text);
+      caret-color: var(--accent);
+      line-height: 1.58;
+      padding: 14px;
+    }
+
+    .editor::selection {
+      background: var(--accent);
+      color: #0c1114;
+    }
+
+    .helper {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .helper strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .toast {
+      position: absolute;
+      z-index: 6;
+      top: 14px;
+      right: 14px;
+      max-width: calc(100% - 28px);
+      padding: 9px 12px;
+      border: 1px solid rgba(139, 201, 192, 0.48);
+      border-radius: 7px;
+      background: #112023;
+      color: var(--accent);
+      font-size: 0.78rem;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-4px);
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast[data-visible="true"] {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Variant A: preserve the old native 50/50 split. */
+    .variant-a .content-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .variant-a .edit-surface {
+      flex-direction: column;
+      padding: 22px;
+    }
+
+    .variant-a .editor {
+      border-color: transparent;
+      background: transparent;
+      padding: 0;
+    }
+
+    .variant-a .edit-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 12px;
+    }
+
+    /* Variant B: context rail collapses when the editor takes focus. */
+    .variant-b .content-grid {
+      grid-template-columns: minmax(280px, 0.78fr) 1.42fr;
+    }
+
+    .variant-b[data-mode="editing"] .content-grid {
+      grid-template-columns: 88px 1fr;
+    }
+
+    .variant-b[data-mode="editing"] .history-list {
+      padding: 10px;
+    }
+
+    .variant-b[data-mode="editing"] .history-item {
+      min-height: 58px;
+      grid-template-columns: 1fr;
+      justify-items: center;
+      padding: 8px;
+    }
+
+    .variant-b[data-mode="editing"] .history-item .item-text {
+      width: 2.2ch;
+      font-weight: 700;
+    }
+
+    .variant-b[data-mode="editing"] .history-item .item-type {
+      display: none;
+    }
+
+    .variant-b .edit-surface {
+      flex-direction: column;
+      gap: 13px;
+      padding: 20px 24px 22px;
+    }
+
+    .focus-heading {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .focus-heading h2 {
+      margin: 0;
+      font-size: 1.08rem;
+    }
+
+    .focus-heading p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    /* Variant C: the draft stays visually paired with its source. */
+    .variant-c .content-grid {
+      grid-template-columns: minmax(250px, 0.7fr) 1.5fr;
+    }
+
+    .variant-c .edit-surface {
+      flex-direction: column;
+      gap: 12px;
+      padding: 17px 20px 20px;
+    }
+
+    .compare-original {
+      flex: 0 0 auto;
+      max-height: 30%;
+      overflow: auto;
+      padding: 12px 14px;
+      border: 1px solid rgba(52, 74, 75, 0.6);
+      border-radius: 8px;
+      background: rgba(20, 32, 36, 0.56);
+    }
+
+    .compare-original p {
+      margin: 0;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .compare-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 650;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .compare-label .safety-copy {
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .draft-stack {
+      display: flex;
+      min-height: 0;
+      flex: 1;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .prototype-switcher {
+      position: fixed;
+      z-index: 40;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      left: 50%;
+      display: grid;
+      grid-template-columns: 48px minmax(180px, auto) 48px;
+      align-items: center;
+      overflow: hidden;
+      border: 1px solid #557477;
+      border-radius: 999px;
+      background: #e4efed;
+      color: #0c1114;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+      transform: translateX(-50%);
+    }
+
+    .prototype-switcher button {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      place-items: center;
+      border: 0;
+      background: transparent;
+      color: #0c1114;
+      cursor: pointer;
+    }
+
+    .prototype-switcher button:hover {
+      background: #c4d9d5;
+    }
+
+    .prototype-switcher svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .variant-name {
+      padding-inline: 14px;
+      border-inline: 1px solid #a8bfbb;
+      font-size: 0.78rem;
+      font-weight: 750;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .state-hud {
+      position: fixed;
+      z-index: 30;
+      top: 18px;
+      right: 18px;
+      max-width: min(330px, calc(100vw - 36px));
+      padding: 10px 13px;
+      border: 1px solid rgba(52, 74, 75, 0.9);
+      border-radius: 8px;
+      background: rgba(8, 12, 15, 0.9);
+      color: var(--muted);
+      font: 0.73rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      backdrop-filter: blur(10px);
+    }
+
+    .state-hud strong {
+      color: var(--text);
+    }
+
+    @media (max-width: 780px) {
+      body {
+        overflow: hidden;
+      }
+
+      .prototype-note {
+        position: absolute;
+      }
+
+      .state-hud {
+        display: none;
+      }
+
+      .stage {
+        height: 100svh;
+        min-height: 0;
+        padding: 92px 14px 82px;
+      }
+
+      .variant {
+        height: calc(100svh - 174px);
+      }
+
+      .clipboard-window {
+        height: calc(100svh - 174px);
+        min-height: 0;
+      }
+
+      .variant-a .content-grid,
+      .variant-b .content-grid,
+      .variant-b[data-mode="editing"] .content-grid,
+      .variant-c .content-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 0.72fr) minmax(0, 1.28fr);
+      }
+
+      .history-panel {
+        min-height: 0;
+        border-right: 0;
+        border-bottom: 1px solid rgba(52, 74, 75, 0.55);
+      }
+
+      .variant-b[data-mode="editing"] .history-list {
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+      }
+
+      .variant-b[data-mode="editing"] .history-item {
+        width: 70px;
+        flex: 0 0 70px;
+      }
+
+      .window-header {
+        min-height: 56px;
+      }
+
+      .content-grid {
+        height: calc(100% - 56px);
+      }
+
+      .action-row {
+        justify-content: stretch;
+      }
+
+      .action-row .button {
+        flex: 1;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stage {
+        padding-inline: 8px;
+      }
+
+      .clipboard-window {
+        border-radius: 8px;
+      }
+
+      .view-surface,
+      .variant-a .edit-surface,
+      .variant-b .edit-surface,
+      .variant-c .edit-surface {
+        padding: 14px;
+      }
+
+      .history-list {
+        padding: 8px;
+      }
+
+      .history-item {
+        min-height: 48px;
+      }
+
+      .variant-name {
+        min-width: 0;
+        max-width: 190px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    @media (max-height: 560px) {
+      .prototype-note,
+      .state-hud {
+        display: none;
+      }
+
+      .stage {
+        height: 100svh;
+        min-height: 0;
+        padding: 12px 16px 72px;
+      }
+
+      .variant,
+      .clipboard-window {
+        height: calc(100svh - 84px);
+        min-height: 0;
+      }
+
+      .window-header {
+        min-height: 48px;
+        padding-block: 7px;
+      }
+
+      .content-grid {
+        height: calc(100% - 48px);
+      }
+
+      .history-list {
+        padding: 8px;
+      }
+
+      .history-item {
+        min-height: 46px;
+        padding-block: 6px;
+      }
+
+      .view-surface,
+      .variant-a .edit-surface,
+      .variant-b .edit-surface,
+      .variant-c .edit-surface {
+        padding: 12px 14px;
+      }
+
+      .pane-kicker {
+        margin-bottom: 6px;
+      }
+
+      .action-row {
+        padding-top: 8px;
+      }
+
+      .prototype-switcher {
+        bottom: 8px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside class="prototype-note">
+    <strong>Throwaway Phase 1 prototype</strong><br>
+    Correct “chek” to “check”, then compare how each editing mode feels.
+  </aside>
+
+  <output class="state-hud" id="stateHud" aria-live="polite"></output>
+
+  <main class="stage">
+    <section class="variant variant-a" data-variant="A" data-name="In-place pane" data-mode="viewing" data-overlay="open">
+      <div class="clipboard-window">
+        <header class="window-header">
+          <div class="search-copy">Search clipboard…</div>
+          <div class="mode-label">Native split · Variant A</div>
+        </header>
+        <div class="content-grid">
+          <nav class="history-panel" aria-label="Clipboard history">
+            <ul class="history-list"></ul>
+          </nav>
+          <section class="detail-panel" aria-label="Selected clipboard entry">
+            <div class="toast" role="status">Saved as a new clipboard item</div>
+            <div class="view-surface">
+              <p class="pane-kicker">Selected text</p>
+              <p class="preview-text"></p>
+              <div class="pane-spacer"></div>
+              <div class="action-row">
+                <button class="button edit-trigger" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4Z" stroke="currentColor" stroke-width="1.8"/><path d="m13.5 6.5 4 4" stroke="currentColor" stroke-width="1.8"/></svg>
+                  Edit <kbd>Ctrl E</kbd>
+                </button>
+              </div>
+            </div>
+            <div class="edit-surface">
+              <label class="pane-kicker" for="editorA">Editing selected text</label>
+              <textarea class="editor" id="editorA" spellcheck="false"></textarea>
+              <div class="edit-footer">
+                <span class="helper">Original stays in history</span>
+                <div class="action-row">
+                  <button class="button ghost cancel-trigger" type="button">Cancel <kbd>Esc</kbd></button>
+                  <button class="button primary save-trigger" type="button">Copy new <kbd>Ctrl Enter</kbd></button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="desktop-result">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2"/><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.6"/></svg>
+        <h2>Edited text copied</h2>
+        <p>Variant A mirrors the old proof: saving closes the clipboard overlay.</p>
+        <button class="button reopen-trigger" type="button">Reopen clipboard</button>
+      </div>
+    </section>
+
+    <section class="variant variant-b" data-variant="B" data-name="Focus canvas" data-mode="viewing" data-overlay="open">
+      <div class="clipboard-window">
+        <header class="window-header">
+          <div class="search-copy">Search clipboard…</div>
+          <div class="mode-label">Context rail · Variant B</div>
+        </header>
+        <div class="content-grid">
+          <nav class="history-panel" aria-label="Clipboard history">
+            <ul class="history-list"></ul>
+          </nav>
+          <section class="detail-panel" aria-label="Selected clipboard entry">
+            <div class="toast" role="status">New item selected; original preserved</div>
+            <div class="view-surface">
+              <p class="pane-kicker">Selected text</p>
+              <p class="preview-text"></p>
+              <div class="pane-spacer"></div>
+              <div class="action-row">
+                <button class="button primary edit-trigger" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4Z" stroke="currentColor" stroke-width="1.8"/><path d="m13.5 6.5 4 4" stroke="currentColor" stroke-width="1.8"/></svg>
+                  Edit text <kbd>Ctrl E</kbd>
+                </button>
+              </div>
+            </div>
+            <div class="edit-surface">
+              <div class="focus-heading">
+                <div>
+                  <h2>Edit clipboard text</h2>
+                  <p>History contracts to a context rail while you write.</p>
+                </div>
+                <span class="helper"><strong>Draft</strong></span>
+              </div>
+              <label class="pane-kicker" for="editorB">Text</label>
+              <textarea class="editor" id="editorB" spellcheck="false"></textarea>
+              <div class="action-row">
+                <button class="button ghost cancel-trigger" type="button">Cancel <kbd>Esc</kbd></button>
+                <button class="button primary save-trigger" type="button">Save as new <kbd>Ctrl Enter</kbd></button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="desktop-result">
+        <h2>Overlay closed</h2>
+        <button class="button reopen-trigger" type="button">Reopen clipboard</button>
+      </div>
+    </section>
+
+    <section class="variant variant-c" data-variant="C" data-name="Before / after" data-mode="viewing" data-overlay="open">
+      <div class="clipboard-window">
+        <header class="window-header">
+          <div class="search-copy">Search clipboard…</div>
+          <div class="mode-label">Review-first · Variant C</div>
+        </header>
+        <div class="content-grid">
+          <nav class="history-panel" aria-label="Clipboard history">
+            <ul class="history-list"></ul>
+          </nav>
+          <section class="detail-panel" aria-label="Selected clipboard entry">
+            <div class="toast" role="status">Draft saved; original remains directly below it</div>
+            <div class="view-surface">
+              <p class="pane-kicker">Selected text</p>
+              <p class="preview-text"></p>
+              <div class="pane-spacer"></div>
+              <div class="action-row start">
+                <button class="button edit-trigger" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4Z" stroke="currentColor" stroke-width="1.8"/><path d="m13.5 6.5 4 4" stroke="currentColor" stroke-width="1.8"/></svg>
+                  Edit with original visible <kbd>Ctrl E</kbd>
+                </button>
+              </div>
+            </div>
+            <div class="edit-surface">
+              <div class="compare-original">
+                <div class="compare-label">
+                  <span>Original</span>
+                  <span class="safety-copy">Preserved in history</span>
+                </div>
+                <p class="original-text"></p>
+              </div>
+              <div class="draft-stack">
+                <label class="compare-label" for="editorC">Edited copy</label>
+                <textarea class="editor" id="editorC" spellcheck="false"></textarea>
+              </div>
+              <div class="action-row">
+                <button class="button ghost cancel-trigger" type="button">Discard draft <kbd>Esc</kbd></button>
+                <button class="button primary save-trigger" type="button">Copy edited version <kbd>Ctrl Enter</kbd></button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="desktop-result">
+        <h2>Overlay closed</h2>
+        <button class="button reopen-trigger" type="button">Reopen clipboard</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="prototype-switcher" id="prototypeSwitcher" aria-label="Prototype variants">
+    <button id="previousVariant" type="button" aria-label="Previous prototype variant">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="variant-name" id="variantName"></div>
+    <button id="nextVariant" type="button" aria-label="Next prototype variant">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </nav>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var seedItems = [
+        { text: "The first compile chek passed.", type: "Text" },
+        { text: "pnpm check && pnpm test", type: "Command" },
+        { text: "https://github.com/basecamp/omarchy", type: "URL" },
+        { text: "محرر الحافظة يعمل مع النص العربي", type: "Text" },
+        { text: "Meeting notes:\n- ship the small hook\n- keep ClipEdit separate", type: "Text" },
+        { text: "/home/sinkeat/Projects/omarchy/plugins", type: "Path" }
+      ];
+
+      var variants = Array.prototype.slice.call(document.querySelectorAll(".variant"));
+      var variantKeys = variants.map(function (section) { return section.dataset.variant; });
+      var stateByVariant = new Map();
+      var currentKey = "A";
+      var switcher = document.getElementById("prototypeSwitcher");
+      var variantName = document.getElementById("variantName");
+      var stateHud = document.getElementById("stateHud");
+
+      function isTextControl(element) {
+        return element && (
+          element.matches("input, textarea, select") ||
+          element.isContentEditable
+        );
+      }
+
+      function currentSection() {
+        return variants.find(function (section) {
+          return section.dataset.variant === currentKey;
+        });
+      }
+
+      function currentState() {
+        return stateByVariant.get(currentKey);
+      }
+
+      function announce(action) {
+        var section = currentSection();
+        var state = currentState();
+        state.lastAction = action;
+        var item = state.items[state.selectedIndex];
+        stateHud.innerHTML =
+          "<strong>Prototype state</strong><br>" +
+          "variant: " + section.dataset.variant + " (" + section.dataset.name + ")<br>" +
+          "mode: " + section.dataset.mode + "<br>" +
+          "overlay: " + section.dataset.overlay + "<br>" +
+          "selected: " + (state.selectedIndex + 1) + " / " + state.items.length + "<br>" +
+          "dirty: " + (state.dirty ? "yes" : "no") + "<br>" +
+          "action: " + action + "<br>" +
+          "text: " + item.text.length + " characters";
+      }
+
+      function makeHistoryButton(section, item, index) {
+        var button = document.createElement("button");
+        var text = document.createElement("span");
+        var type = document.createElement("span");
+        button.type = "button";
+        button.className = "history-item";
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", index === stateByVariant.get(section.dataset.variant).selectedIndex ? "true" : "false");
+        button.dataset.index = String(index);
+        text.className = "item-text";
+        text.textContent = item.text.replace(/\s+/g, " ");
+        type.className = "item-type";
+        type.textContent = item.type;
+        button.appendChild(text);
+        button.appendChild(type);
+        button.addEventListener("click", function () {
+          selectItem(section, index);
+        });
+        return button;
+      }
+
+      function renderHistory(section) {
+        var state = stateByVariant.get(section.dataset.variant);
+        var list = section.querySelector(".history-list");
+        list.replaceChildren();
+        state.items.forEach(function (item, index) {
+          var entry = document.createElement("li");
+          entry.appendChild(makeHistoryButton(section, item, index));
+          list.appendChild(entry);
+        });
+      }
+
+      function renderSelected(section) {
+        var state = stateByVariant.get(section.dataset.variant);
+        var item = state.items[state.selectedIndex];
+        section.querySelectorAll(".preview-text, .original-text").forEach(function (node) {
+          node.textContent = item.text;
+        });
+      }
+
+      function selectItem(section, index) {
+        var state = stateByVariant.get(section.dataset.variant);
+        if (section.dataset.mode === "editing" && state.dirty) {
+          return;
+        }
+        state.selectedIndex = index;
+        state.dirty = false;
+        section.dataset.mode = "viewing";
+        renderHistory(section);
+        renderSelected(section);
+        if (section.dataset.variant === currentKey) announce("selected history item");
+      }
+
+      function edit(section) {
+        var state = stateByVariant.get(section.dataset.variant);
+        var item = state.items[state.selectedIndex];
+        var editor = section.querySelector(".editor");
+        state.draftStart = item.text;
+        state.dirty = false;
+        editor.value = item.text;
+        section.querySelectorAll(".original-text").forEach(function (node) {
+          node.textContent = item.text;
+        });
+        section.dataset.mode = "editing";
+        window.setTimeout(function () {
+          editor.focus();
+          editor.setSelectionRange(editor.value.length, editor.value.length);
+        }, 0);
+        if (section.dataset.variant === currentKey) announce("editing started");
+      }
+
+      function cancel(section) {
+        var state = stateByVariant.get(section.dataset.variant);
+        section.querySelector(".editor").value = state.draftStart || state.items[state.selectedIndex].text;
+        state.dirty = false;
+        section.dataset.mode = "viewing";
+        section.querySelector(".edit-trigger").focus();
+        if (section.dataset.variant === currentKey) announce("draft canceled");
+      }
+
+      function showToast(section) {
+        var toast = section.querySelector(".toast");
+        toast.dataset.visible = "true";
+        window.clearTimeout(section.toastTimer);
+        section.toastTimer = window.setTimeout(function () {
+          toast.dataset.visible = "false";
+        }, 1900);
+      }
+
+      function save(section) {
+        var state = stateByVariant.get(section.dataset.variant);
+        var editor = section.querySelector(".editor");
+        var nextText = editor.value;
+        if (!nextText.length) return;
+        state.items.unshift({ text: nextText, type: "Edited" });
+        state.selectedIndex = 0;
+        state.dirty = false;
+        section.dataset.mode = "viewing";
+        renderHistory(section);
+        renderSelected(section);
+
+        if (section.dataset.variant === "A") {
+          section.dataset.overlay = "closed";
+          section.querySelector(".reopen-trigger").focus();
+          announce("saved new item; overlay closed");
+        } else {
+          showToast(section);
+          section.querySelector(".edit-trigger").focus();
+          announce("saved new item; overlay stayed open");
+        }
+      }
+
+      function reopen(section) {
+        section.dataset.overlay = "open";
+        section.dataset.mode = "viewing";
+        section.querySelector(".edit-trigger").focus();
+        announce("overlay reopened");
+      }
+
+      function initializeSection(section) {
+        stateByVariant.set(section.dataset.variant, {
+          items: seedItems.map(function (item) { return { text: item.text, type: item.type }; }),
+          selectedIndex: 0,
+          draftStart: "",
+          dirty: false,
+          lastAction: "prototype loaded"
+        });
+
+        renderHistory(section);
+        renderSelected(section);
+
+        section.querySelector(".edit-trigger").addEventListener("click", function () {
+          edit(section);
+        });
+        section.querySelector(".cancel-trigger").addEventListener("click", function () {
+          cancel(section);
+        });
+        section.querySelector(".save-trigger").addEventListener("click", function () {
+          save(section);
+        });
+        section.querySelector(".reopen-trigger").addEventListener("click", function () {
+          reopen(section);
+        });
+        section.querySelector(".editor").addEventListener("input", function (event) {
+          var state = stateByVariant.get(section.dataset.variant);
+          state.dirty = event.currentTarget.value !== state.draftStart;
+          if (section.dataset.variant === currentKey) announce("draft changed");
+        });
+      }
+
+      function setVariant(key) {
+        currentKey = variantKeys.indexOf(key) >= 0 ? key : "A";
+        variants.forEach(function (section) {
+          section.dataset.active = section.dataset.variant === currentKey ? "true" : "false";
+        });
+        var section = currentSection();
+        variantName.textContent = section.dataset.variant + " · " + section.dataset.name;
+        var url = new URL(window.location.href);
+        url.searchParams.set("variant", currentKey);
+        window.history.replaceState({}, "", url);
+        announce("variant switched");
+      }
+
+      function cycle(delta) {
+        var index = variantKeys.indexOf(currentKey);
+        setVariant(variantKeys[(index + delta + variantKeys.length) % variantKeys.length]);
+      }
+
+      variants.forEach(initializeSection);
+
+      document.getElementById("previousVariant").addEventListener("click", function () { cycle(-1); });
+      document.getElementById("nextVariant").addEventListener("click", function () { cycle(1); });
+
+      document.addEventListener("keydown", function (event) {
+        var section = currentSection();
+
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "e") {
+          event.preventDefault();
+          if (section.dataset.overlay === "open" && section.dataset.mode !== "editing") edit(section);
+          return;
+        }
+
+        if (section.dataset.mode === "editing" && event.key === "Escape") {
+          event.preventDefault();
+          cancel(section);
+          return;
+        }
+
+        if (section.dataset.mode === "editing" && event.ctrlKey && event.key === "Enter") {
+          event.preventDefault();
+          save(section);
+          return;
+        }
+
+        if (!isTextControl(event.target) && event.key === "ArrowLeft") {
+          event.preventDefault();
+          cycle(-1);
+        } else if (!isTextControl(event.target) && event.key === "ArrowRight") {
+          event.preventDefault();
+          cycle(1);
+        }
+      });
+
+      var initialUrl = new URL(window.location.href);
+      var initial = initialUrl.searchParams.get("variant") || "A";
+      setVariant(initial.toUpperCase());
+      if (initialUrl.searchParams.get("mode") === "editing") edit(currentSection());
+
+      var isPrototypeHost = ["", "localhost", "127.0.0.1"].indexOf(window.location.hostname) >= 0;
+      switcher.hidden = !isPrototypeHost;
+    }());
+  </script>
+</body>
+</html>
