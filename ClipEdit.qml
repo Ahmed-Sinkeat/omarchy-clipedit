@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "ClipEditModel.js" as ClipEditModel
 
 // An Edit action for the Omarchy clipboard.
 //
@@ -32,11 +33,9 @@ Item {
   }
 
   function save(text) {
-    if (text.length > 0) {
-      copyProcess.payload = text
-      copyProcess.running = true
-    }
+    if (!ClipEditModel.startCopy(copyProcess, text)) return false
     if (root.host) root.host.requestClose()
+    return true
   }
 
   // The text goes over stdin, never argv: a clipboard entry can exceed
@@ -47,12 +46,7 @@ Item {
     property string payload: ""
 
     command: ["wl-copy"]
-    stdinEnabled: true
-    onStarted: {
-      write(payload)
-      payload = ""
-      stdinEnabled = false
-    }
+    onStarted: ClipEditModel.writePendingCopy(copyProcess)
   }
 
   Component {
@@ -150,7 +144,7 @@ Item {
           anchors.right: buttons.left
           anchors.rightMargin: Style.spacing.controlGap
           anchors.verticalCenter: parent.verticalCenter
-          text: "Original kept"
+          text: editor.length > 0 ? "Original kept" : "Enter text to copy"
           color: Color.menu.text
           opacity: 0.55
           font.family: Style.font.menuFamily
@@ -176,6 +170,8 @@ Item {
           Button {
             text: "Copy new  Ctrl+Enter"
             bordered: true
+            enabled: editor.length > 0 && !copyProcess.running
+            opacity: enabled ? 1 : 0.45
             foreground: Color.menu.text
             fontFamily: Style.font.menuFamily
             fontSize: Style.font.body

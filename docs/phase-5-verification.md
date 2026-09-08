@@ -31,17 +31,20 @@ extension slot hosted by the enabled `sinkeat.clipboard` clone.
 | Reinstall | back to `items 1, actions 1` |
 | Shell restart | clean, no warnings from the slot or the extension |
 | Omarchy shell test suite | `plugin-extensions` 19/19; `plugins`, `plugin-validate`, `clipboard`, `plugin-registry-contract` all pass |
+| Repository-root plugin validation | passes with `manifest.json` and `ClipEdit.qml` at the Git root |
+| Two consecutive saves | `clipedit-repro-first`, then `clipedit-repro-second`, both verified through `wl-paste` |
+| Long source beyond the display cap | 9,019 characters opened in full; appending `-edited` saved 9,026 characters ending in `-tail-edited` |
+| Empty edited result | `Ctrl+Enter` leaves the editor open; hint changes to `Enter text to copy`; Save is disabled |
+| Physical `Ctrl+E` | exercised with `wtype`; editor opened with focus and the original text selected for editing |
+| History click while editing | guarded in the host and covered by the clipboard regression suite |
 
 ## Not verified here
 
-- **Physical `Ctrl+E` keypress.** The overlay takes exclusive keyboard focus,
-  so the shortcut was exercised by handing `handleKey` a synthesized event with
-  `Qt.ControlModifier` and `Qt.Key_E`, which is the same path a real key takes
-  after `Keys.onPressed`.
 - **The built-in `omarchy.clipboard` as host.** `$OMARCHY_PATH` is
   `/usr/share/omarchy` in this session, which is root-owned; the identical host
   code was verified through the user-writable clone instead. The clone's
   `Clipboard.qml` is byte-identical to the upstream branch.
+- **Installation from the published Git URL.** The repository root now passes `omarchy-plugin-validate`, but this checkout has no remote and cannot be tested through `omarchy plugin add` until it is published.
 
 ## One thing worth remembering
 

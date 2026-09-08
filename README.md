@@ -1,73 +1,74 @@
 # ClipEdit for Omarchy
 
-Edit clipboard text in place, inside Omarchy's own clipboard manager, as a
-genuine third-party plugin.
+Edit clipboard text inside Omarchy's native clipboard manager. Select a text entry, press `Ctrl+E`, edit it in the existing detail pane, then press `Ctrl+Enter` to copy the edit as a new clipboard entry. `Esc` cancels and preserves the original.
 
-The design proposal is [omarchy-clipedit-project.md](omarchy-clipedit-project.md).
+ClipEdit implements [Variant A](prototypes/phase-1/VERDICT.md). It does not add a second overlay, replace clipboard history, or edit images.
 
-## State
+## Project state
 
 | Phase | Status |
 |---|---|
-| 1 — validate the interaction | Done. Variant A chosen, see [prototypes/phase-1/VERDICT.md](prototypes/phase-1/VERDICT.md) |
-| 2 — design the extension hook | Done, see [docs/phase-2-extension-hook.md](docs/phase-2-extension-hook.md) |
-| 3 — implement it upstream | Done, on the `clipboard-extension-point` branch of the Omarchy fork |
-| 4 — build `sinkeat.clipedit` | Done, see [sinkeat.clipedit/](sinkeat.clipedit/) |
-| 5 — compatibility testing | Done, see [docs/phase-5-verification.md](docs/phase-5-verification.md) |
+| 1 — validate the interaction | Done — Variant A selected |
+| 2 — design the extension hook | Done — see [the extension design](docs/phase-2-extension-hook.md) |
+| 3 — implement it upstream | Implemented locally on Omarchy branch `clipboard-extension-point`; PR pending |
+| 4 — build ClipEdit | Done — plugin manifest and entry point now live at the repository root |
+| 5 — compatibility testing | In progress — targeted regressions pass; final built-in-host verification remains |
 
-Installed and working in this session. `Ctrl+E` on a text entry, `Ctrl+Enter`
-to save, `Esc` to cancel.
+The full proposal is in [omarchy-clipedit-project.md](omarchy-clipedit-project.md).
+
+## Shortcuts
+
+| Action | Shortcut |
+|---|---|
+| Edit the selected text entry | `Ctrl+E` |
+| Copy the edit as a new entry | `Ctrl+Enter` |
+| Cancel | `Esc` |
+
+An empty edit is not saved: the editor stays open and asks for text. Images and empty history entries do not offer the Edit action.
+
+## Requirements
+
+ClipEdit uses Omarchy's proposed `PluginExtensions` slot. Until that extension point lands upstream, it needs the matching host implementation from the Omarchy fork's `clipboard-extension-point` branch. The temporary `sinkeat.clipboard` clone in the development session provides that host.
+
+## Install
+
+After this repository is published, it can be installed normally because `manifest.json` is at the repository root:
+
+```bash
+omarchy plugin add https://github.com/Ahmed-Sinkeat/omarchy-clipedit.git
+omarchy plugin enable sinkeat.clipedit
+```
+
+The Git URL is not usable until the repository has been pushed. The extension point must also be present in the running Omarchy version.
 
 ## Layout
 
+```text
+manifest.json          third-party plugin manifest
+ClipEdit.qml           editor UI and host interaction
+ClipEditModel.js       reusable clipboard-write lifecycle
+test/                  plugin regression tests
+docs/                  extension design and verification records
+prototypes/phase-1/    retained interaction evidence
 ```
-sinkeat.clipedit/     the plugin: manifest, ClipEdit.qml, README
-docs/                 phase records
-prototypes/phase-1/   throwaway UX prototype, kept as evidence
+
+## Verification
+
+```bash
+./test/clipedit-test.sh
+cd ~/Projects/omarchy/omarchy
+./bin/omarchy-plugin-validate ~/Projects/omarchy/plugins
+./test/shell.d/clipboard-test.sh
+./test/shell.d/plugin-extensions-test.sh
 ```
+
+See [the compatibility record](docs/phase-5-verification.md) for the live-session coverage and remaining release checks.
 
 ## The upstream half
 
-The plugin needs one thing Omarchy does not ship yet: a slot a plugin can
-offer to other plugins. That change lives in the Omarchy fork at
-`~/Projects/omarchy/omarchy`, branch `clipboard-extension-point`:
-
-```
-shell/Ui/PluginExtensions.qml     the slot
-shell/Ui/PluginExtensions.js      shortcut grammar + host lookup
-shell/plugins/clipboard/          the first host
-test/shell.d/plugin-extensions-test.sh
-```
-
-It contains no editing logic. Push it and open the PR against
-`basecamp/omarchy` when you are ready.
-
-## Live test bed
-
-`$OMARCHY_PATH` is `/usr/share/omarchy` (root-owned), so the host half cannot
-be installed there without `omarchy dev link` and a reboot. Instead the
-enabled `sinkeat.clipboard` clone in `~/.config/omarchy/plugins/` carries a
-byte-identical copy of the upstream `Clipboard.qml` plus `PluginExtensions.*`.
-
-**This is temporary.** Once the upstream change ships, delete the clone and
-re-enable `omarchy.clipboard`:
+The upstream change lives in the Omarchy fork at `~/Projects/omarchy/omarchy`, branch `clipboard-extension-point`. It contains no ClipEdit-specific editing logic. After it ships, remove the temporary clipboard clone and re-enable `omarchy.clipboard`:
 
 ```bash
 omarchy plugin remove sinkeat.clipboard
 omarchy-shell shell setPluginEnabled omarchy.clipboard true
 ```
-
-ClipEdit itself needs no change when that happens — it names
-`omarchy.clipboard` as its host either way.
-
-## Re-verifying
-
-```bash
-cd ~/Projects/omarchy/omarchy && ./test/shell.d/plugin-extensions-test.sh
-omarchy-shell shell listPlugins | jq '.[] | select(.id == "sinkeat.clipedit")'
-```
-
-After editing the host (`Clipboard.qml` or `PluginExtensions.qml`), copy it
-into the clone and run `omarchy-restart-shell` — a `keepLoaded` plugin does not
-pick up its own changes from plugin hot-reload. Editing `ClipEdit.qml` alone
-reloads live.

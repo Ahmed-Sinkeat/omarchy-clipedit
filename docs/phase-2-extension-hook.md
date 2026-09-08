@@ -58,6 +58,8 @@ and renders three things: `available(entry)` as actions,
 `handleKey(event, entry)` for contributed shortcuts, and `paneComponent` when
 `paneOpen`. The host never learns what an extension does.
 
+The entry passed to an extension contains the complete source value even when the host caps or reshapes text for display. A host must construct action entries from its source record, not from its rendered preview.
+
 ## Why this shape
 
 | Goal | How it is met |
