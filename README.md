@@ -2,6 +2,9 @@
 
 Edit clipboard text inside Omarchy's native clipboard manager. Select a text entry, press `Ctrl+E`, edit it in the existing detail pane, then press `Ctrl+Enter` to copy the edit as a new clipboard entry. `Esc` cancels and preserves the original.
 
+> [!IMPORTANT]
+> ClipEdit is currently a preview. It requires the extension support proposed in [Omarchy PR #10919](https://github.com/omacom/omarchy/pull/10919), which is not part of a released Omarchy version yet.
+
 ClipEdit implements [Variant A](prototypes/phase-1/VERDICT.md). It does not add a second overlay, replace clipboard history, or edit images.
 
 ## Project state
@@ -10,9 +13,9 @@ ClipEdit implements [Variant A](prototypes/phase-1/VERDICT.md). It does not add 
 |---|---|
 | 1 — validate the interaction | Done — Variant A selected |
 | 2 — design the extension hook | Done — see [the extension design](docs/phase-2-extension-hook.md) |
-| 3 — implement it upstream | Implemented locally on Omarchy branch `clipboard-extension-point`; PR pending |
+| 3 — implement it upstream | Submitted in [Omarchy PR #10919](https://github.com/omacom/omarchy/pull/10919) |
 | 4 — build ClipEdit | Done — plugin manifest and entry point now live at the repository root |
-| 5 — compatibility testing | In progress — targeted regressions pass; final built-in-host verification remains |
+| 5 — compatibility testing | In progress — public package validation passes; final built-in-host verification remains |
 
 The full proposal is in [omarchy-clipedit-project.md](omarchy-clipedit-project.md).
 
@@ -28,18 +31,18 @@ An empty edit is not saved: the editor stays open and asks for text. Images and 
 
 ## Requirements
 
-ClipEdit uses Omarchy's proposed `PluginExtensions` slot. Until that extension point lands upstream, it needs the matching host implementation from the Omarchy fork's `clipboard-extension-point` branch. The temporary `sinkeat.clipboard` clone in the development session provides that host.
+ClipEdit uses Omarchy's proposed `PluginExtensions` slot. Until [Omarchy PR #10919](https://github.com/omacom/omarchy/pull/10919) lands, it needs the matching host implementation from the fork's [`clipboard-extension-point`](https://github.com/Ahmed-Sinkeat/omarchy/tree/clipboard-extension-point) branch. The temporary `sinkeat.clipboard` clone in the development session provides that host.
 
 ## Install
 
-After this repository is published, it can be installed normally because `manifest.json` is at the repository root:
+The public repository can be installed normally because `manifest.json` is at the repository root:
 
 ```bash
 omarchy plugin add https://github.com/Ahmed-Sinkeat/omarchy-clipedit.git
 omarchy plugin enable sinkeat.clipedit
 ```
 
-The Git URL is not usable until the repository has been pushed. The extension point must also be present in the running Omarchy version.
+The extension point must also be present in the running Omarchy version; installing ClipEdit on a standard release does not make it usable yet.
 
 ## Layout
 
@@ -70,7 +73,7 @@ ClipEdit is available under the [MIT License](LICENSE).
 
 ## The upstream half
 
-The upstream change lives in the Omarchy fork at `~/Projects/omarchy/omarchy`, branch `clipboard-extension-point`. It contains no ClipEdit-specific editing logic. After it ships, remove the temporary clipboard clone and re-enable `omarchy.clipboard`:
+The upstream change is [Omarchy PR #10919](https://github.com/omacom/omarchy/pull/10919). It contains no ClipEdit-specific editing logic. After it ships, remove the temporary clipboard clone and re-enable `omarchy.clipboard`:
 
 ```bash
 omarchy plugin remove sinkeat.clipboard

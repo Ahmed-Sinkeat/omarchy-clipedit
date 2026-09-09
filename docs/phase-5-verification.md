@@ -37,6 +37,7 @@ extension slot hosted by the enabled `sinkeat.clipboard` clone.
 | Empty edited result | `Ctrl+Enter` leaves the editor open; hint changes to `Enter text to copy`; Save is disabled |
 | Physical `Ctrl+E` | exercised with `wtype`; editor opened with focus and the original text selected for editing |
 | History click while editing | guarded in the host and covered by the clipboard regression suite |
+| Public Git package | clean clone from GitHub passes `omarchy-plugin-validate` and `test/clipedit-test.sh` |
 
 ## Not verified here
 
@@ -44,7 +45,7 @@ extension slot hosted by the enabled `sinkeat.clipboard` clone.
   `/usr/share/omarchy` in this session, which is root-owned; the identical host
   code was verified through the user-writable clone instead. The clone's
   `Clipboard.qml` is byte-identical to the upstream branch.
-- **Installation from the published Git URL.** The repository root now passes `omarchy-plugin-validate`, but this checkout has no remote and cannot be tested through `omarchy plugin add` until it is published.
+- **End-to-end installation through `omarchy plugin add`.** The public Git URL clones and validates, but the add flow has not been exercised against a released Omarchy version because the required host support is still proposed in [Omarchy PR #10919](https://github.com/omacom/omarchy/pull/10919).
 
 ## One thing worth remembering
 
