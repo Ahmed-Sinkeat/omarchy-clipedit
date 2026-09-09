@@ -64,6 +64,10 @@ cd ~/Projects/omarchy/omarchy
 
 See [the compatibility record](docs/phase-5-verification.md) for the live-session coverage and remaining release checks.
 
+## License
+
+ClipEdit is available under the [MIT License](LICENSE).
+
 ## The upstream half
 
 The upstream change lives in the Omarchy fork at `~/Projects/omarchy/omarchy`, branch `clipboard-extension-point`. It contains no ClipEdit-specific editing logic. After it ships, remove the temporary clipboard clone and re-enable `omarchy.clipboard`:
